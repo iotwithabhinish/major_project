@@ -1,0 +1,211 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 750" width="1280" height="750" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+    <style>
+      .layer { fill: #fafafa; stroke: #777; stroke-width: 1.2; stroke-dasharray: 7 5; }
+      .layer-title { font-size: 13px; font-weight: bold; letter-spacing: 1.2px; fill: #444; }
+      .box { fill: #ffffff; stroke: #222; stroke-width: 1.4; }
+      .core { fill: #e9eef4; stroke: #222; stroke-width: 1.8; }
+      .module { fill: #ffffff; stroke: #555; stroke-width: 1; }
+      .title { font-size: 14px; font-weight: bold; fill: #111; }
+      .big { font-size: 16px; font-weight: bold; fill: #111; }
+      .sub { font-size: 11px; fill: #444; }
+      .mod { font-size: 11.5px; fill: #222; }
+      .mono { font-family: "Courier New", Courier, monospace; font-size: 10.5px; fill: #222; }
+      .label { font-size: 10px; fill: #333; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
+      .signal { stroke: #222; stroke-width: 1.3; fill: none; }
+      .power { stroke: #222; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; }
+      .net { stroke: #222; stroke-width: 2.4; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="750" fill="#ffffff"/>
+
+  <!-- ================= Layers ================= -->
+  <rect class="layer" x="15" y="45" width="600" height="690" rx="10"/>
+  <text class="layer-title" x="315" y="72" text-anchor="middle">PERCEPTION &amp; ACTUATION LAYER</text>
+  <rect class="layer" x="630" y="45" width="260" height="690" rx="10"/>
+  <text class="layer-title" x="760" y="72" text-anchor="middle">COMMUNICATION &amp; CLOUD</text>
+  <rect class="layer" x="905" y="45" width="360" height="690" rx="10"/>
+  <text class="layer-title" x="1085" y="72" text-anchor="middle">APPLICATION LAYER</text>
+
+  <!-- ================= Sensors ================= -->
+  <rect class="box" x="50" y="100" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="124" text-anchor="middle">INMP441</text>
+  <text class="sub" x="135" y="142" text-anchor="middle">MEMS microphone (voice)</text>
+
+  <rect class="box" x="50" y="175" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="199" text-anchor="middle">DHT11</text>
+  <text class="sub" x="135" y="217" text-anchor="middle">Temperature &amp; humidity</text>
+
+  <rect class="box" x="50" y="250" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="274" text-anchor="middle">Voltage Sensor</text>
+  <text class="sub" x="135" y="292" text-anchor="middle">0–25 V, 5:1 divider</text>
+
+  <rect class="box" x="50" y="325" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="349" text-anchor="middle">ACS712</text>
+  <text class="sub" x="135" y="367" text-anchor="middle">Hall-effect current sensor</text>
+
+  <rect class="box" x="50" y="400" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="424" text-anchor="middle">MQ-2</text>
+  <text class="sub" x="135" y="442" text-anchor="middle">Gas / smoke sensor</text>
+
+  <rect class="box" x="50" y="490" width="170" height="58" rx="6"/>
+  <text class="title" x="135" y="514" text-anchor="middle">Solar Panel</text>
+  <text class="sub" x="135" y="532" text-anchor="middle">3.7 V, ≈1 W</text>
+
+  <!-- Solar DC power path to voltage sensor and ACS712 -->
+  <path class="power" d="M50,519 H32 V279 H48" marker-end="url(#arrow)"/>
+  <path class="power" d="M32,354 H48" marker-end="url(#arrow)"/>
+
+  <!-- Sensor -> ESP32 links -->
+  <line class="signal" x1="220" y1="129" x2="328" y2="129" marker-end="url(#arrow)"/>
+  <text class="label" x="274" y="124" text-anchor="middle">I2S</text>
+  <text class="label" x="274" y="142" text-anchor="middle">GPIO32/33/35</text>
+
+  <line class="signal" x1="220" y1="204" x2="328" y2="204" marker-end="url(#arrow)"/>
+  <text class="label" x="274" y="199" text-anchor="middle">1-Wire</text>
+  <text class="label" x="274" y="217" text-anchor="middle">GPIO4</text>
+
+  <line class="signal" x1="220" y1="279" x2="328" y2="279" marker-end="url(#arrow)"/>
+  <text class="label" x="274" y="274" text-anchor="middle">ADC</text>
+  <text class="label" x="274" y="292" text-anchor="middle">GPIO34</text>
+
+  <line class="signal" x1="220" y1="354" x2="328" y2="354" marker-end="url(#arrow)"/>
+  <text class="label" x="274" y="349" text-anchor="middle">ADC + divider</text>
+  <text class="label" x="274" y="367" text-anchor="middle">GPIO36</text>
+
+  <line class="signal" x1="220" y1="429" x2="328" y2="429" marker-end="url(#arrow)"/>
+  <text class="label" x="274" y="424" text-anchor="middle">ADC + divider</text>
+  <text class="label" x="274" y="442" text-anchor="middle">GPIO39</text>
+
+  <!-- ================= ESP32 ================= -->
+  <rect class="core" x="330" y="100" width="250" height="365" rx="8"/>
+  <text class="big" x="455" y="124" text-anchor="middle">ESP32-WROOM-32</text>
+  <text class="sub" x="455" y="142" text-anchor="middle">240 MHz dual-core · Wi-Fi 802.11 b/g/n</text>
+
+  <rect class="module" x="345" y="160" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="183" text-anchor="middle">ADC acquisition &amp; averaging</text>
+  <rect class="module" x="345" y="208" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="231" text-anchor="middle">I2S audio capture + VAD</text>
+  <rect class="module" x="345" y="256" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="279" text-anchor="middle">Local voice command parser</text>
+  <rect class="module" x="345" y="304" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="327" text-anchor="middle">Gas safety task (alarm + door)</text>
+  <rect class="module" x="345" y="352" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="375" text-anchor="middle">MQTT + HTTPS clients</text>
+  <rect class="module" x="345" y="400" width="220" height="38" rx="4"/>
+  <text class="mod" x="455" y="423" text-anchor="middle">Relay · servo · buzzer control</text>
+
+  <!-- ================= Actuators ================= -->
+  <line class="signal" x1="365" y1="465" x2="365" y2="503" marker-end="url(#arrow)"/>
+  <text class="label" x="371" y="489">GPIO26/27</text>
+  <line class="signal" x1="530" y1="465" x2="530" y2="503" marker-end="url(#arrow)"/>
+  <text class="label" x="536" y="489">GPIO18</text>
+  <path class="signal" d="M580,448 H598 V647 H587" marker-end="url(#arrow)"/>
+  <text class="label" x="596" y="560" text-anchor="middle" transform="rotate(-90 596 560)">GPIO19</text>
+
+  <rect class="box" x="290" y="505" width="150" height="58" rx="6"/>
+  <text class="title" x="365" y="529" text-anchor="middle">Relay Module</text>
+  <text class="sub" x="365" y="547" text-anchor="middle">2-ch, opto-isolated</text>
+
+  <rect class="box" x="455" y="505" width="130" height="58" rx="6"/>
+  <text class="title" x="520" y="529" text-anchor="middle">Servo Motor</text>
+  <text class="sub" x="520" y="547" text-anchor="middle">Door open / close</text>
+
+  <path class="signal" d="M365,563 V594 M325,594 H405"/>
+  <line class="signal" x1="325" y1="594" x2="325" y2="623" marker-end="url(#arrow)"/>
+  <line class="signal" x1="405" y1="594" x2="405" y2="623" marker-end="url(#arrow)"/>
+  <rect class="box" x="292" y="625" width="66" height="45" rx="6"/>
+  <text class="title" x="325" y="652" text-anchor="middle">Light</text>
+  <rect class="box" x="372" y="625" width="66" height="45" rx="6"/>
+  <text class="title" x="405" y="652" text-anchor="middle">Fan</text>
+
+  <rect class="box" x="455" y="620" width="130" height="55" rx="6"/>
+  <text class="title" x="520" y="643" text-anchor="middle">Buzzer</text>
+  <text class="sub" x="520" y="661" text-anchor="middle">Gas / smoke alarm</text>
+
+  <!-- ================= Legend ================= -->
+  <rect x="40" y="590" width="240" height="125" rx="6" fill="#ffffff" stroke="#999" stroke-width="1"/>
+  <text class="title" x="55" y="612">Legend</text>
+  <line class="signal" x1="55" y1="636" x2="105" y2="636" marker-end="url(#arrow)"/>
+  <text class="sub" x="115" y="640">Sensor / control signal</text>
+  <line class="power" x1="55" y1="662" x2="105" y2="662" marker-end="url(#arrow)"/>
+  <text class="sub" x="115" y="666">DC power path</text>
+  <line class="net" x1="55" y1="690" x2="105" y2="690" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="sub" x="115" y="694">Network link (Wi-Fi / Internet)</text>
+
+  <!-- ================= Communication & cloud ================= -->
+  <rect class="box" x="665" y="100" width="200" height="70" rx="6"/>
+  <text class="title" x="765" y="127" text-anchor="middle">Wit.ai</text>
+  <text class="sub" x="765" y="145" text-anchor="middle">Cloud speech-to-text</text>
+  <text class="sub" x="765" y="160" text-anchor="middle">(16 kHz PCM → transcript)</text>
+
+  <rect class="core" x="665" y="220" width="200" height="220" rx="8"/>
+  <text class="title" x="765" y="245" text-anchor="middle">MQTT Broker (HiveMQ)</text>
+  <text class="sub" x="765" y="263" text-anchor="middle">Publish / Subscribe · QoS 1</text>
+  <line x1="680" y1="275" x2="850" y2="275" stroke="#999" stroke-width="1"/>
+  <text class="mono" x="680" y="294">&lt;prefix&gt;/&lt;room&gt;/…</text>
+  <text class="mono" x="680" y="316">commands    ← dashboard</text>
+  <text class="mono" x="680" y="336">telemetry   → dashboard</text>
+  <text class="mono" x="680" y="356">ack         → dashboard</text>
+  <text class="mono" x="680" y="376">voice/transcript</text>
+  <text class="mono" x="680" y="396">voice/status</text>
+  <text class="sub" x="765" y="424" text-anchor="middle">Retained telemetry &amp; status</text>
+
+  <rect class="box" x="665" y="480" width="200" height="70" rx="6"/>
+  <text class="title" x="765" y="507" text-anchor="middle">Open-Meteo API</text>
+  <text class="sub" x="765" y="525" text-anchor="middle">Hourly irradiance, cloud</text>
+  <text class="sub" x="765" y="540" text-anchor="middle">cover &amp; temperature</text>
+
+  <!-- ESP32 <-> Wit.ai -->
+  <line class="net" x1="582" y1="135" x2="663" y2="135" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="label" x="622" y="128" text-anchor="middle">HTTPS</text>
+  <text class="label" x="622" y="150" text-anchor="middle">audio / text</text>
+
+  <!-- ESP32 <-> Broker -->
+  <line class="net" x1="582" y1="330" x2="663" y2="330" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="label" x="622" y="323" text-anchor="middle">MQTT / TCP</text>
+  <text class="label" x="622" y="345" text-anchor="middle">port 1883</text>
+
+  <!-- Broker <-> Dashboard -->
+  <line class="net" x1="867" y1="330" x2="923" y2="330" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="label" x="895" y="323" text-anchor="middle">MQTT/WSS</text>
+  <text class="label" x="895" y="345" text-anchor="middle">port 8884</text>
+
+  <!-- Open-Meteo -> Dashboard -->
+  <line class="net" x1="867" y1="515" x2="923" y2="515" marker-end="url(#arrow)"/>
+  <text class="label" x="895" y="508" text-anchor="middle">HTTPS</text>
+  <text class="label" x="895" y="530" text-anchor="middle">JSON</text>
+
+  <!-- ================= Dashboard ================= -->
+  <rect class="core" x="925" y="100" width="320" height="460" rx="8"/>
+  <text class="big" x="1085" y="124" text-anchor="middle">Web Dashboard</text>
+  <text class="sub" x="1085" y="142" text-anchor="middle">React 19 · Vite · Tailwind CSS · MQTT.js</text>
+
+  <rect class="module" x="940" y="160" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="187" text-anchor="middle">Device control (3 rooms: light, fan, door)</text>
+  <rect class="module" x="940" y="214" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="241" text-anchor="middle">Rule-based voice command parser</text>
+  <rect class="module" x="940" y="268" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="288" text-anchor="middle">Automation engine</text>
+  <text class="sub" x="1085" y="303" text-anchor="middle">fan auto / timer · scenes · schedules</text>
+  <rect class="module" x="940" y="322" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="342" text-anchor="middle">Solar forecasting model</text>
+  <text class="sub" x="1085" y="357" text-anchor="middle">weather model × live calibration factor</text>
+  <rect class="module" x="940" y="376" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="403" text-anchor="middle">Analytics · security · gas alerts</text>
+  <rect class="module" x="940" y="430" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="457" text-anchor="middle">Web Speech API (browser microphone)</text>
+  <rect class="module" x="940" y="484" width="290" height="44" rx="4"/>
+  <text class="mod" x="1085" y="511" text-anchor="middle">Local storage (state, logs, schedules)</text>
+
+  <!-- ================= User ================= -->
+  <line class="signal" x1="1085" y1="562" x2="1085" y2="621" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="label" x="1093" y="596">UI / voice</text>
+  <rect class="box" x="1000" y="623" width="170" height="58" rx="6"/>
+  <text class="title" x="1085" y="647" text-anchor="middle">End User</text>
+  <text class="sub" x="1085" y="665" text-anchor="middle">Browser (PC / mobile)</text>
+</svg>

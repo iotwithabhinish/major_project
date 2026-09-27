@@ -1,183 +1,51 @@
-export const MQTT_TOPICS = {
-  commands: 'room1/commands',
-  telemetry: 'room1/telemetry',
-  voiceTranscript: 'room1/voice/transcript',
-}
-
 export const VOICE_COMMAND_EXAMPLES = [
-  'Turn on the light',
-  'Turn off the fan',
-  'Open the door',
-  'Start fan timer for 15 minutes',
-  'Set fan threshold to 26 degrees',
-  'Go to analytics',
+  'Turn on the light', 'Turn off the fan', 'Open the door',
+  'Start fan timer for 15 minutes', 'Set fan threshold to 26 degrees', 'Activate good night scene',
 ]
 
-const DEVICE_ALIASES = {
-  light: ['light', 'lights', 'lamp', 'lamps'],
-  fan: ['fan', 'ceiling fan'],
-  door: ['door', 'lock', 'main door'],
+// Includes common speech-recognition variants (matches the ESP32 firmware parser).
+const aliases = {
+  door: ['door', 'doors', 'gate', 'lock', 'unlock'],
+  light: ['light', 'lights', 'lite', 'lamp', 'lamps', 'bulb', 'delight'],
+  fan: ['fan', 'fans', 'fun'],
 }
+const hasWord = (text, words) => words.some((word) => ` ${text} `.includes(` ${word} `))
+const includesAny = (text, terms) => terms.some((term) => text.includes(term))
 
-const NAV_TARGETS = [
-  { id: 'home', label: 'Home', phrases: ['home', 'dashboard'] },
-  { id: 'chart', label: 'Analytics', phrases: ['analytics', 'chart', 'stats'] },
-  { id: 'cctv', label: 'CCTV', phrases: ['cctv', 'camera', 'cameras'] },
-  { id: 'scenes', label: 'Scenes', phrases: ['scene', 'scenes'] },
-  { id: 'profile', label: 'Profile', phrases: ['profile', 'account'] },
-  { id: 'settings', label: 'Settings', phrases: ['settings', 'preferences'] },
-]
+export const clampFanThreshold = (value) => Math.min(40, Math.max(16, Number(value) || 24))
+export const clampFanTimerMinutes = (value) => Math.min(120, Math.max(1, Number(value) || 15))
 
-const ON_PHRASES = ['turn on', 'switch on', 'start', 'enable', 'activate']
-const OFF_PHRASES = ['turn off', 'switch off', 'stop', 'disable', 'deactivate']
-const NAV_PHRASES = ['open', 'show', 'go to', 'switch to']
-
-const containsAny = (text, phrases) => phrases.some((phrase) => text.includes(phrase))
-
-const mentionsDevice = (text, device) =>
-  DEVICE_ALIASES[device].some((alias) => text.includes(alias))
-
-export const clampFanThreshold = (value) => Math.max(16, value)
-
-export const clampFanTimerMinutes = (value) => Math.min(120, Math.max(5, value))
-
-export const parseVoiceTranscriptPayload = (rawPayload) => {
-  if (typeof rawPayload !== 'string' || !rawPayload.trim()) {
-    return null
-  }
-
+export const parseVoiceTranscriptPayload = (payload) => {
+  const raw = payload?.toString().trim()
+  if (!raw) return null
   try {
-    const parsed = JSON.parse(rawPayload)
-
-    if (typeof parsed === 'string' && parsed.trim()) {
-      return { transcript: parsed.trim(), source: 'INMP441 / MQTT' }
-    }
-
-    const transcript = parsed?.transcript ?? parsed?.text ?? parsed?.command
-    if (typeof transcript === 'string' && transcript.trim()) {
-      return {
-        transcript: transcript.trim(),
-        source: parsed?.source || 'INMP441 / MQTT',
-      }
-    }
-  } catch {
-    return { transcript: rawPayload.trim(), source: 'INMP441 / MQTT' }
-  }
-
-  return null
+    const parsed = JSON.parse(raw)
+    const transcript = typeof parsed === 'string' ? parsed : parsed.transcript || parsed.text || parsed.command
+    return typeof transcript === 'string' && transcript.trim() ? { transcript: transcript.trim(), source: parsed.source || 'MQTT device' } : null
+  } catch { return { transcript: raw, source: 'MQTT device' } }
 }
 
-export const parseVoiceCommand = (transcript) => {
-  const normalized = transcript
-    .toLowerCase()
-    .replace(/[^a-z0-9.\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  if (!normalized) {
-    return null
+export const parseVoiceCommand = (input) => {
+  // Keep "." only inside numbers (26.5 degrees); a sentence full stop would
+  // otherwise turn "light." into a different word.
+  const text = input.toLowerCase().replace(/[^a-z0-9.\s]/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!text) return null
+  if (includesAny(text, ['good night', 'all off', 'everything off'])) return { type: 'scene', id: 'good-night' }
+  if (includesAny(text, ['movie scene', 'movie mode'])) return { type: 'scene', id: 'movie' }
+  if (includesAny(text, ['stop timer', 'cancel timer'])) return { type: 'timer-stop' }
+  const timer = text.match(/(?:fan\s+timer|timer)(?:\s+(?:for|to))?\s+(\d{1,3})/)
+  if (timer) return { type: 'timer', minutes: clampFanTimerMinutes(timer[1]) }
+  const threshold = text.match(/(?:threshold|fan temperature)(?:\s+to)?\s+(\d+(?:\.\d+)?)/)
+  if (threshold) return { type: 'threshold', value: clampFanThreshold(threshold[1]) }
+  const saysOff = hasWord(text, ['off', 'stop', 'disable']) || includesAny(` ${text} `, [' turn of ', ' switch of '])
+  const saysOn = hasWord(text, ['on', 'start', 'enable']) && !saysOff
+  for (const [device, terms] of Object.entries(aliases)) {
+    if (!hasWord(text, terms)) continue
+    if (device === 'door' && hasWord(text, ['open', 'unlock'])) return { type: 'device', device, state: 'OPEN' }
+    if (device === 'door' && hasWord(text, ['close', 'lock', 'shut'])) return { type: 'device', device, state: 'CLOSE' }
+    if (device === 'door') continue
+    if (saysOn) return { type: 'device', device, state: 'ON' }
+    if (saysOff) return { type: 'device', device, state: 'OFF' }
   }
-
-  if (
-    containsAny(normalized, [
-      'turn everything off',
-      'switch everything off',
-      'all off',
-      'shutdown room',
-    ])
-  ) {
-    return { type: 'scene', scene: 'all-off', label: 'Turn everything off' }
-  }
-
-  const fanTimerStartMatch =
-    normalized.match(
-      /(?:start|set|run)\s+(?:the\s+)?fan\s+timer(?:\s+for)?\s+(\d{1,3})(?:\s*(?:minute|minutes|min))?/,
-    ) || normalized.match(/fan\s+timer\s+(\d{1,3})/)
-
-  if (fanTimerStartMatch) {
-    return {
-      type: 'fan-timer-start',
-      minutes: clampFanTimerMinutes(Number.parseInt(fanTimerStartMatch[1], 10)),
-      label: `Start fan timer for ${fanTimerStartMatch[1]} minutes`,
-    }
-  }
-
-  if (
-    normalized.match(/(?:stop|cancel|clear)\s+(?:the\s+)?fan\s+timer/) ||
-    normalized.includes('stop timer')
-  ) {
-    return { type: 'fan-timer-stop', label: 'Stop fan timer' }
-  }
-
-  const fanThresholdMatch =
-    normalized.match(
-      /(?:set|change|update)\s+(?:the\s+)?fan\s+(?:threshold|temperature)(?:\s+to)?\s+(\d+(?:\.\d+)?)/,
-    ) || normalized.match(/fan\s+(?:threshold|temperature)\s+(\d+(?:\.\d+)?)/)
-
-  if (fanThresholdMatch) {
-    const value = clampFanThreshold(Number.parseFloat(fanThresholdMatch[1]))
-
-    return {
-      type: 'fan-threshold',
-      value,
-      label: `Set fan threshold to ${value.toFixed(1)} C`,
-    }
-  }
-
-  const navTarget = NAV_TARGETS.find(
-    ({ phrases }) => containsAny(normalized, phrases) && containsAny(normalized, NAV_PHRASES),
-  )
-  if (navTarget) {
-    return {
-      type: 'navigation',
-      target: navTarget.id,
-      label: `Open ${navTarget.label}`,
-    }
-  }
-
-  if (
-    containsAny(normalized, ['play music', 'resume music', 'start music', 'play song', 'resume song'])
-  ) {
-    return { type: 'music', state: 'play', label: 'Play music' }
-  }
-
-  if (containsAny(normalized, ['pause music', 'stop music', 'pause song', 'stop song'])) {
-    return { type: 'music', state: 'pause', label: 'Pause music' }
-  }
-
-  if (mentionsDevice(normalized, 'door')) {
-    if (containsAny(normalized, ['open', 'unlock'])) {
-      return { type: 'device', device: 'door', state: 'OPEN', label: 'Open door' }
-    }
-
-    if (containsAny(normalized, ['close', 'shut', 'lock'])) {
-      return { type: 'device', device: 'door', state: 'CLOSE', label: 'Close door' }
-    }
-  }
-
-  for (const device of ['light', 'fan']) {
-    if (!mentionsDevice(normalized, device)) {
-      continue
-    }
-
-    if (containsAny(normalized, ON_PHRASES) || normalized.includes(`${device} on`)) {
-      return {
-        type: 'device',
-        device,
-        state: 'ON',
-        label: `Turn on ${device}`,
-      }
-    }
-
-    if (containsAny(normalized, OFF_PHRASES) || normalized.includes(`${device} off`)) {
-      return {
-        type: 'device',
-        device,
-        state: 'OFF',
-        label: `Turn off ${device}`,
-      }
-    }
-  }
-
   return null
 }

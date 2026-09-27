@@ -9,8 +9,11 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-check*
 dist-ssr
 *.local
+esp32_voice_control/secrets.h
+esp32_voice_control/secrets.h
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +25,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.claude
